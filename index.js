@@ -120,41 +120,41 @@ async function run() {
       }
     });
 
-// User Profile Update Done By (dev-Arif)
-   app.patch("/userUpdate", async (req, res) => {
-     try {
-       const updatedUser = req.body;
+    // User Profile Update Done By (dev-Arif)
+    app.patch("/userUpdate", async (req, res) => {
+      try {
+        const updatedUser = req.body;
 
-       if (!updatedUser.email) {
-         return res
-           .status(400)
-           .send({ message: "Email is required for updating a user" });
-       }
+        if (!updatedUser.email) {
+          return res
+            .status(400)
+            .send({ message: "Email is required for updating a user" });
+        }
 
-       const query = { email: updatedUser.email };
-       const existingUser = await userCollection.findOne(query);
+        const query = { email: updatedUser.email };
+        const existingUser = await userCollection.findOne(query);
 
-       if (!existingUser) {
-         return res.status(404).send({ message: "User not found" });
-       }
+        if (!existingUser) {
+          return res.status(404).send({ message: "User not found" });
+        }
 
-       // Remove the email field from the updatedUser to prevent it from being updated
-       delete updatedUser.email;
+        // Remove the email field from the updatedUser to prevent it from being updated
+        delete updatedUser.email;
 
-       const updateResult = await userCollection.updateOne(query, {
-         $set: updatedUser,
-       });
+        const updateResult = await userCollection.updateOne(query, {
+          $set: updatedUser,
+        });
 
-       if (updateResult.modifiedCount === 1) {
-         res.send({ message: "User updated successfully" });
-       } else {
-         res.send({ message: "User not updated" });
-       }
-     } catch (error) {
-       console.log(error);
-       res.status(500).send({ message: "Internal server error" });
-     }
-   });
+        if (updateResult.modifiedCount === 1) {
+          res.send({ message: "User updated successfully" });
+        } else {
+          res.send({ message: "User not updated" });
+        }
+      } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
 
     // User Role
     app.get("/user-role/:email", verifyJWT, async (req, res) => {
@@ -170,31 +170,30 @@ async function run() {
     });
 
     // Load All Users: (dev-akash)
-    app.get('/user', async (req, res) => {
+    app.get("/user", async (req, res) => {
       const cursor = userCollection.find();
       const result = await cursor.toArray();
       res.send(result);
-    })
+    });
 
     // Load Single User: (dev-akash)
-    app.get('/user/:id', async (req, res) => {
+    app.get("/user/:id", async (req, res) => {
       const id = req.params.id;
       const user = await userCollection.findOne({ _id: new ObjectId(id) });
       res.send(user);
-    })
+    });
 
     // User Delete Method: (dev-akash)
-    app.delete('/user/:id', async (req, res) => {
+    app.delete("/user/:id", async (req, res) => {
       const id = req.params.id;
       const deleteUser = { _id: new ObjectId(id) };
       const result = await userCollection.deleteOne(deleteUser);
       if (result.deletedCount) {
-        res.send(result)
+        res.send(result);
+      } else {
+        res.send({ message: "Something Went Wrong!" });
       }
-      else {
-        res.send({ message: 'Something Went Wrong!' })
-      }
-    })
+    });
 
     // Job Post: (dev-akash)
     app.post("/job-post", async (req, res) => {
@@ -212,14 +211,14 @@ async function run() {
     });
 
     // Get All Job Post: (dev-akash)
-    app.get('/job-post', async (req, res) => {
+    app.get("/job-post", async (req, res) => {
       const allJobPost = jobsCollection.find();
       const result = await allJobPost.toArray();
       res.send(result);
-    })
+    });
 
     // Load Single Job: (dev-akash)
-    app.get('/job-post/:id', async (req, res) => {
+    app.get("/job-post/:id", async (req, res) => {
       const id = req.params.id;
       const singleJob = await jobsCollection.findOne({ _id: new ObjectId(id) });
       res.send(singleJob);
@@ -249,18 +248,74 @@ async function run() {
     });
 
     // Job Post Delete Method: (dev-akash)
-    app.delete('/job-post/:id', async (req, res) => {
+    app.delete("/job-post/:id", async (req, res) => {
       const id = req.params.id;
       const deleteJob = { _id: new ObjectId(id) };
       const result = await jobsCollection.deleteOne(deleteJob);
       if (result.deletedCount) {
-        res.send(result)
+        res.send(result);
+      } else {
+        res.send({ message: "Something Went Wrong!" });
       }
-      else {
-        res.send({ message: 'Something Went Wrong!' })
-      }
-    })
+    });
 
+    // apply to the job
+
+    app.post("/job-apply", async (req, res) => {
+      try {
+        // Assuming you have the job ID and user email
+        const { jobId, userEmail } = req.body;
+
+        const query = { _id: ObjectId(jobId) };
+        const existingJob = await jobsCollection.findOne(query);
+
+        if (!existingJob) {
+          return res.status(404).send({ message: "Job not found" });
+        }
+
+        const updateData = {
+          $inc: { applyQty: 1 },
+          $push: { appliedPerson: userEmail },
+        };
+
+        // Check if 'applyQty' field doesn't exist, then create it and set it to 1
+        if (!existingJob.hasOwnProperty("applyQty")) {
+          updateData.$set = { applyQty: 1 };
+        }
+        // If 'appliedPerson' doesn't exist, create the array and add the user's email
+        if (!existingJob.hasOwnProperty("appliedPerson")) {
+          updateData.$set = { appliedPerson: [userEmail] };
+        }
+
+        // Update the document
+        await jobsCollection.updateOne(query, updateData);
+
+        res.send({ message: "Job applied successfully" });
+      } catch (error) {
+        console.log(error);
+        res.status(500).send({ message: "Internal server error" });
+      }
+    });
+
+    //get applied jobSeekers-info
+    app.get("/applied-jobseeker/:email", async (req, res) => {
+
+      const email = req.params.email;
+
+      try {
+        const jobs = await jobsCollection.find({ email }).toArray();
+
+        const userEmails = jobs.map((job) => job.appliedPerson);
+
+        const users = await userCollection
+          .find({ email: { $in: userEmails } })
+          .toArray();
+        res.send(users);
+      }
+      catch (error) {
+        console.log(error);
+      }
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
