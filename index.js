@@ -259,33 +259,7 @@ async function run() {
       }
     });
 
-    // apply to the job
-
-    app.post("/job-apply", async (req, res) => {
-      try {
-        // Assuming you have the job ID and user email
-        const { jobId, userEmail } = req.body;
-
-        const query = { _id: ObjectId(jobId) };
-        const existingJob = await jobsCollection.findOne(query);
-
-        if (!existingJob) {
-          return res.status(404).send({ message: "Job not found" });
-        }
-
-        const updateData = {
-          $inc: { applyQty: 1 },
-          $push: { appliedPerson: userEmail },
-        };
-
-        // Check if 'applyQty' field doesn't exist, then create it and set it to 1
-        if (!existingJob.hasOwnProperty("applyQty")) {
-          updateData.$set = { applyQty: 1 };
-        }
-        // If 'appliedPerson' doesn't exist, create the array and add the user's email
-        if (!existingJob.hasOwnProperty("appliedPerson")) {
-          updateData.$set = { appliedPerson: [userEmail] };
-        }
+   
 
         // Update the document
         await jobsCollection.updateOne(query, updateData);
